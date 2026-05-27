@@ -4,6 +4,7 @@ import { Upload, FileText, Trash2, ArrowUp, ArrowDown, Download, Loader2, GripVe
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import Layout from "@/components/Layout";
 
 interface PdfFile {
   id: string;
@@ -147,26 +148,11 @@ export default function PdfMerger() {
   const totalPages = files.reduce((sum, f) => sum + (f.pageCount ?? 0), 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/40">
-      {/* Header */}
-      <header className="border-b border-border/60 bg-white/70 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shadow-sm">
-            <FileText className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold text-foreground leading-tight">Free PDF Merger</h1>
-            <p className="text-xs text-muted-foreground">Combine multiple PDFs into one — free, private, instant</p>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-4xl mx-auto px-4 py-10 space-y-8">
-        {/* Hero */}
+    <Layout breadcrumb={{ label: "Merge PDF" }}>
+      <div className="space-y-8">
         <div className="text-center space-y-2">
-          <h2 className="text-3xl font-extrabold tracking-tight text-foreground">
-            Merge PDF Files Online
-          </h2>
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-3xl mx-auto shadow-md">🔗</div>
+          <h1 className="text-3xl font-extrabold tracking-tight">Merge PDF Files</h1>
           <p className="text-muted-foreground text-base max-w-lg mx-auto">
             Upload your PDFs, reorder them however you like, then download a single merged file.
             Everything runs in your browser — no uploads to any server.
@@ -221,12 +207,7 @@ export default function PdfMerger() {
                   </span>
                 )}
               </h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-muted-foreground text-xs"
-                onClick={() => setFiles([])}
-              >
+              <Button variant="ghost" size="sm" className="text-muted-foreground text-xs" onClick={() => setFiles([])}>
                 Clear all
               </Button>
             </div>
@@ -246,22 +227,15 @@ export default function PdfMerger() {
                     dragOverIndex === index && draggingIndex !== index && "border-primary bg-primary/5 scale-[1.01]"
                   )}
                 >
-                  {/* Drag handle */}
                   <div className="cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-muted-foreground transition-colors">
                     <GripVertical className="w-4 h-4" />
                   </div>
-
-                  {/* Page number badge */}
                   <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">
                     {index + 1}
                   </div>
-
-                  {/* File icon */}
                   <div className="w-9 h-9 rounded-lg bg-red-50 border border-red-100 flex items-center justify-center shrink-0">
                     <FileText className="w-5 h-5 text-red-400" />
                   </div>
-
-                  {/* File info */}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground truncate">{f.name}</p>
                     <p className="text-xs text-muted-foreground">
@@ -269,33 +243,14 @@ export default function PdfMerger() {
                       {f.pageCount !== null && ` · ${f.pageCount} page${f.pageCount !== 1 ? "s" : ""}`}
                     </p>
                   </div>
-
-                  {/* Actions */}
                   <div className="flex items-center gap-1 shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="w-8 h-8 text-muted-foreground hover:text-foreground"
-                      disabled={index === 0}
-                      onClick={() => moveFile(index, "up")}
-                    >
+                    <Button variant="ghost" size="icon" className="w-8 h-8 text-muted-foreground hover:text-foreground" disabled={index === 0} onClick={() => moveFile(index, "up")}>
                       <ArrowUp className="w-3.5 h-3.5" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="w-8 h-8 text-muted-foreground hover:text-foreground"
-                      disabled={index === files.length - 1}
-                      onClick={() => moveFile(index, "down")}
-                    >
+                    <Button variant="ghost" size="icon" className="w-8 h-8 text-muted-foreground hover:text-foreground" disabled={index === files.length - 1} onClick={() => moveFile(index, "down")}>
                       <ArrowDown className="w-3.5 h-3.5" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="w-8 h-8 text-muted-foreground hover:text-destructive"
-                      onClick={() => removeFile(f.id)}
-                    >
+                    <Button variant="ghost" size="icon" className="w-8 h-8 text-muted-foreground hover:text-destructive" onClick={() => removeFile(f.id)}>
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   </div>
@@ -303,32 +258,16 @@ export default function PdfMerger() {
               ))}
             </div>
 
-            {/* Add more + merge */}
             <div className="flex gap-3 pt-2">
-              <Button
-                variant="outline"
-                className="gap-2"
-                onClick={() => fileInputRef.current?.click()}
-              >
+              <Button variant="outline" className="gap-2" onClick={() => fileInputRef.current?.click()}>
                 <Plus className="w-4 h-4" />
                 Add more PDFs
               </Button>
-
-              <Button
-                className="flex-1 gap-2 h-11 text-base font-semibold shadow-md"
-                onClick={mergePdfs}
-                disabled={merging || files.length < 2}
-              >
+              <Button className="flex-1 gap-2 h-11 text-base font-semibold shadow-md" onClick={mergePdfs} disabled={merging || files.length < 2}>
                 {merging ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Merging...
-                  </>
+                  <><Loader2 className="w-4 h-4 animate-spin" />Merging...</>
                 ) : (
-                  <>
-                    <Download className="w-4 h-4" />
-                    Merge &amp; Download PDF
-                  </>
+                  <><Download className="w-4 h-4" />Merge &amp; Download PDF</>
                 )}
               </Button>
             </div>
@@ -338,21 +277,9 @@ export default function PdfMerger() {
         {/* Features */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
           {[
-            {
-              icon: "🔒",
-              title: "100% Private",
-              desc: "Your files never leave your device. All processing happens locally in the browser.",
-            },
-            {
-              icon: "⚡",
-              title: "Instant Merging",
-              desc: "No waiting, no queues. PDFs are merged instantly using your device's CPU.",
-            },
-            {
-              icon: "🆓",
-              title: "Completely Free",
-              desc: "No sign-up, no watermarks, no limits. Just upload and merge.",
-            },
+            { icon: "🔒", title: "100% Private", desc: "Your files never leave your device." },
+            { icon: "⚡", title: "Instant", desc: "No waiting or queues. Merged instantly." },
+            { icon: "🆓", title: "Free", desc: "No sign-up, no watermarks, no limits." },
           ].map((item) => (
             <div key={item.title} className="bg-white/70 rounded-xl border border-border/60 p-5 space-y-2">
               <div className="text-2xl">{item.icon}</div>
@@ -361,14 +288,7 @@ export default function PdfMerger() {
             </div>
           ))}
         </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-border/60 mt-16 py-6 text-center">
-        <p className="text-xs text-muted-foreground">
-          Free PDF Merger &mdash; Your files stay on your device, always.
-        </p>
-      </footer>
-    </div>
+      </div>
+    </Layout>
   );
 }
