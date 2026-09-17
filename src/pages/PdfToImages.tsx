@@ -6,6 +6,7 @@ import { Upload, FileText, Download, Loader2, CheckCircle2, FileImage } from "lu
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { downloadBlob } from "@/lib/download";
 import Layout from "@/components/Layout";
 import ToolHeader from "@/components/ToolHeader";
 
@@ -35,7 +36,7 @@ export default function PdfToImages() {
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [done, setDone] = useState(false);
-  const [resultUrl, setResultUrl] = useState<string | null>(null);
+  const [resultBlob, setResultBlob] = useState<Blob | null>(null);
   const [resultSize, setResultSize] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -53,7 +54,7 @@ export default function PdfToImages() {
         setFile(f);
         setDone(false);
         setProgress(0);
-        setResultUrl(null);
+        setResultBlob(null);
       } catch {
         toast({ title: "Could not read PDF", variant: "destructive" });
       }
@@ -73,7 +74,7 @@ export default function PdfToImages() {
     setProcessing(true);
     setDone(false);
     setProgress(0);
-    setResultUrl(null);
+    setResultBlob(null);
 
     try {
       const buf = await file.arrayBuffer();
@@ -106,8 +107,7 @@ export default function PdfToImages() {
 
       setProgress(95);
       const zipBlob = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
-      const url = URL.createObjectURL(zipBlob);
-      setResultUrl(url);
+      setResultBlob(zipBlob);
       setResultSize(zipBlob.size);
       setProgress(100);
       setDone(true);
@@ -153,7 +153,7 @@ export default function PdfToImages() {
                 <p className="font-medium text-foreground truncate">{file.name}</p>
                 <p className="text-sm text-muted-foreground">{pageCount} pages · {formatBytes(file.size)}</p>
               </div>
-              <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => { setFile(null); setPageCount(0); setDone(false); setProgress(0); setResultUrl(null); }}>
+              <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => { setFile(null); setPageCount(0); setDone(false); setProgress(0); setResultBlob(null); }}>
                 Change
               </Button>
             </div>
@@ -225,10 +225,11 @@ export default function PdfToImages() {
                     <p className="text-xs text-muted-foreground">{pageCount} PNGs · {formatBytes(resultSize)}</p>
                   </div>
                 </div>
-                <Button asChild className="gap-2">
-                  <a href={resultUrl ?? "#"} download={`${file?.name.replace(/\.pdf$/i, "") || "pdf"}_images.zip`}>
-                    <Download className="w-4 h-4" /> Download ZIP
-                  </a>
+                <Button
+                  className="gap-2"
+                  onClick={() => resultBlob && downloadBlob(resultBlob, `${file?.name.replace(/\.pdf$/i, "") || "pdf"}_images.zip`)}
+                >
+                  <Download className="w-4 h-4" /> Download ZIP
                 </Button>
               </div>
             )}

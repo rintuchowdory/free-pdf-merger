@@ -4,6 +4,7 @@ import { Upload, FileText, Trash2, ArrowUp, ArrowDown, Download, Loader2, GripVe
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { downloadBlob } from "@/lib/download";
 import Layout from "@/components/Layout";
 import { FileStack } from "lucide-react";
 import ToolHeader from "@/components/ToolHeader";
@@ -133,12 +134,7 @@ export default function PdfMerger() {
       }
       const bytes = await merged.save();
       const blob = new Blob([bytes as unknown as BlobPart], { type: "application/pdf" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "merged.pdf";
-      a.click();
-      URL.revokeObjectURL(url);
+      await downloadBlob(blob, "merged.pdf");
       toast({ title: "PDF merged and downloaded!" });
     } catch (err) {
       toast({ title: "Failed to merge PDFs", description: String(err), variant: "destructive" });

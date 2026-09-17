@@ -4,6 +4,7 @@ import { Upload, Images, Download, Loader2, CheckCircle2, X, ArrowUp, ArrowDown 
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { downloadBlob } from "@/lib/download";
 import Layout from "@/components/Layout";
 import ToolHeader from "@/components/ToolHeader";
 
@@ -99,7 +100,7 @@ export default function ImagesToPdf() {
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [done, setDone] = useState(false);
-  const [resultUrl, setResultUrl] = useState<string | null>(null);
+  const [resultBlob, setResultBlob] = useState<Blob | null>(null);
   const [resultSize, setResultSize] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -124,7 +125,7 @@ export default function ImagesToPdf() {
         setPhotos((prev) => [...prev, ...next]);
         setDone(false);
         setProgress(0);
-        setResultUrl(null);
+        setResultBlob(null);
       }
     },
     [toast]
@@ -154,7 +155,7 @@ export default function ImagesToPdf() {
     setProcessing(true);
     setDone(false);
     setProgress(0);
-    setResultUrl(null);
+    setResultBlob(null);
 
     try {
       const pdfDoc = await PDFDocument.create();
@@ -197,8 +198,7 @@ export default function ImagesToPdf() {
       setProgress(95);
       const pdfBytes = await pdfDoc.save();
       const blob = new Blob([pdfBytes as unknown as BlobPart], { type: "application/pdf" });
-      const url = URL.createObjectURL(blob);
-      setResultUrl(url);
+      setResultBlob(blob);
       setResultSize(blob.size);
       setProgress(100);
       setDone(true);
@@ -276,7 +276,7 @@ export default function ImagesToPdf() {
               </h3>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground">{formatBytes(totalBytes)}</span>
-                <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => { photos.forEach((p) => URL.revokeObjectURL(p.url)); setPhotos([]); setDone(false); setProgress(0); setResultUrl(null); }}>
+                <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => { photos.forEach((p) => URL.revokeObjectURL(p.url)); setPhotos([]); setDone(false); setProgress(0); setResultBlob(null); }}>
                   Clear all
                 </Button>
               </div>
@@ -441,10 +441,11 @@ export default function ImagesToPdf() {
                     <p className="text-xs text-muted-foreground">{photos.length} pages · {formatBytes(resultSize)}</p>
                   </div>
                 </div>
-                <Button asChild className="gap-2">
-                  <a href={resultUrl ?? "#"} download="photos.pdf">
-                    <Download className="w-4 h-4" /> Download PDF
-                  </a>
+                <Button
+                  className="gap-2"
+                  onClick={() => resultBlob && downloadBlob(resultBlob, "photos.pdf")}
+                >
+                  <Download className="w-4 h-4" /> Download PDF
                 </Button>
               </div>
             )}

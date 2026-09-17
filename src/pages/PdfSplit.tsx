@@ -4,6 +4,7 @@ import { Upload, FileText, Download, Loader2, CheckCircle2, Scissors } from "luc
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { downloadBlob } from "@/lib/download";
 import Layout from "@/components/Layout";
 import ToolHeader from "@/components/ToolHeader";
 
@@ -78,21 +79,19 @@ export default function PdfSplit() {
       const baseName = file.name.replace(".pdf", "");
 
       if (mode === "all") {
-        // Export each page as a separate PDF, download as individual files
+        // Export each page as a separate PDF, bundled into one ZIP so it
+        // downloads reliably as a single file everywhere (including mobile).
+        const JSZip = (await import("jszip")).default;
+        const zip = new JSZip();
         for (let i = 0; i < src.getPageCount(); i++) {
           const single = await PDFDocument.create();
           const [page] = await single.copyPages(src, [i]);
           single.addPage(page);
           const bytes = await single.save();
-          const blob = new Blob([bytes as unknown as BlobPart], { type: "application/pdf" });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = `${baseName}_page${i + 1}.pdf`;
-          a.click();
-          URL.revokeObjectURL(url);
-          await new Promise((r) => setTimeout(r, 100));
+          zip.file(`${baseName}_page${i + 1}.pdf`, bytes as unknown as ArrayBuffer);
         }
+        const zipBlob = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
+        await downloadBlob(zipBlob, `${baseName}_pages.zip`);
       } else {
         const indices = parsePageRange(rangeInput, pageCount);
         if (!indices) {
@@ -105,12 +104,7 @@ export default function PdfSplit() {
         pages.forEach((p) => extracted.addPage(p));
         const bytes = await extracted.save();
         const blob = new Blob([bytes as unknown as BlobPart], { type: "application/pdf" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `${baseName}_pages${rangeInput.replace(/\s/g, "")}.pdf`;
-        a.click();
-        URL.revokeObjectURL(url);
+        await downloadBlob(blob, `${baseName}_pages${rangeInput.replace(/\s/g, "")}.pdf`);
       }
       setDone(true);
     } catch (err) {

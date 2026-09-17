@@ -4,6 +4,7 @@ import { Upload, FileText, Download, Loader2, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { downloadBlob } from "@/lib/download";
 import Layout from "@/components/Layout";
 import { Minimize2 } from "lucide-react";
 import ToolHeader from "@/components/ToolHeader";
@@ -127,15 +128,10 @@ export default function PdfCompress() {
     }
   };
 
-  const download = () => {
+  const download = async () => {
     if (!result || !file) return;
     const blob = new Blob([result.bytes as unknown as BlobPart], { type: "application/pdf" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = file.name.replace(".pdf", "_compressed.pdf");
-    a.click();
-    URL.revokeObjectURL(url);
+    await downloadBlob(blob, file.name.replace(".pdf", "_compressed.pdf"));
   };
 
   const reduction = result && file ? percentReduction(file.size, result.size) : null;
