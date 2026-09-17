@@ -1,100 +1,141 @@
 import { Link } from "wouter";
+import { ArrowRight, ShieldCheck, Zap, Infinity as InfinityIcon, Lock, MousePointerClick, Download } from "lucide-react";
 import Layout from "@/components/Layout";
-
-const tools = [
-  {
-    href: "/merge",
-    emoji: "🔗",
-    color: "from-blue-500 to-indigo-600",
-    bg: "bg-blue-50 hover:bg-blue-100/80 border-blue-200",
-    label: "Merge PDF",
-    desc: "Combine multiple PDF files into one. Drag to reorder before merging.",
-    badge: "Most popular",
-    badgeColor: "bg-blue-100 text-blue-700",
-  },
-  {
-    href: "/compress",
-    emoji: "🗜️",
-    color: "from-emerald-500 to-green-600",
-    bg: "bg-emerald-50 hover:bg-emerald-100/80 border-emerald-200",
-    label: "Compress PDF",
-    desc: "Reduce PDF file size while keeping great quality. Choose your compression level.",
-    badge: "New",
-    badgeColor: "bg-emerald-100 text-emerald-700",
-  },
-  {
-    href: "/split",
-    emoji: "✂️",
-    color: "from-orange-500 to-amber-600",
-    bg: "bg-orange-50 hover:bg-orange-100/80 border-orange-200",
-    label: "Split PDF",
-    desc: "Extract specific pages or split a PDF into separate single-page files.",
-    badge: null,
-    badgeColor: "",
-  },
-  {
-    href: "/to-images",
-    emoji: "🖼️",
-    color: "from-purple-500 to-violet-600",
-    bg: "bg-purple-50 hover:bg-purple-100/80 border-purple-200",
-    label: "PDF to Images",
-    desc: "Convert every page of your PDF to a high-quality PNG image. Download as ZIP.",
-    badge: null,
-    badgeColor: "",
-  },
-];
+import { TOOLS } from "@/lib/tools";
+import { cn } from "@/lib/utils";
 
 export default function Home() {
   return (
     <Layout>
-      <div className="space-y-10">
+      <div className="space-y-14">
         {/* Hero */}
-        <div className="text-center space-y-3 pb-2">
-          <h1 className="text-4xl font-extrabold tracking-tight text-foreground">
-            Free PDF Tools Online
+        <section className="text-center space-y-5 pt-6">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+            100% private — files never leave your device
+          </span>
+          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight leading-tight">
+            Your entire PDF toolkit,{" "}
+            <span className="bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500 bg-clip-text text-transparent">
+              right in your browser
+            </span>
           </h1>
-          <p className="text-muted-foreground text-lg max-w-xl mx-auto">
-            Merge, compress, split, and convert PDFs — all in your browser.
-            <span className="font-medium text-foreground"> No uploads. No registration. 100% free.</span>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+            Merge, convert, compress and split PDFs — or turn your photos into a PDF document.
+            No uploads. No registration. No watermarks.
           </p>
-        </div>
+          <div className="flex items-center justify-center gap-3 pt-1">
+            <Link
+              href="/merge"
+              className="inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground px-5 py-2.5 text-sm font-semibold shadow-lg shadow-primary/25 hover:bg-primary/90 hover:shadow-primary/30 transition-all"
+            >
+              Merge PDFs <ArrowRight className="w-4 h-4" />
+            </Link>
+            <Link
+              href="/images-to-pdf"
+              className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-5 py-2.5 text-sm font-semibold text-foreground hover:bg-muted transition-colors"
+            >
+              Photos → PDF
+            </Link>
+          </div>
+
+          {/* Stats */}
+          <div className="flex items-center justify-center gap-8 sm:gap-14 pt-8">
+            {[
+              { value: `${TOOLS.length}`, label: "Free tools" },
+              { value: "0", label: "File uploads" },
+              { value: "∞", label: "Usage limit" },
+            ].map((s) => (
+              <div key={s.label} className="text-center">
+                <p className="text-3xl font-extrabold bg-gradient-to-br from-blue-500 to-indigo-600 bg-clip-text text-transparent">
+                  {s.value}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">{s.label}</p>
+              </div>
+            ))}
+          </div>
+        </section>
 
         {/* Tool grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          {tools.map((tool) => (
-            <Link key={tool.href} href={tool.href}>
-              <div className={`group relative rounded-2xl border p-6 cursor-pointer transition-all duration-200 ${tool.bg} hover:shadow-md hover:-translate-y-0.5`}>
-                {tool.badge && (
-                  <span className={`absolute top-4 right-4 text-xs font-semibold px-2 py-0.5 rounded-full ${tool.badgeColor}`}>
-                    {tool.badge}
+        <section>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {TOOLS.map((tool) => (
+              <Link key={tool.href} href={tool.href}>
+                <div className="group relative h-full rounded-2xl border border-border bg-card p-6 cursor-pointer transition-all duration-200 hover:shadow-lg hover:border-primary/30 hover:-translate-y-0.5">
+                  {tool.tag && (
+                    <span className="absolute top-4 right-4 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                      {tool.tag}
+                    </span>
+                  )}
+                  <div
+                    className={cn(
+                      "w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center mb-4 shadow-md transition-transform duration-200 group-hover:scale-110",
+                      tool.gradient
+                    )}
+                  >
+                    <tool.icon className="w-6 h-6 text-white" />
+                  </div>
+                  <h2 className="font-bold text-foreground text-lg mb-1">{tool.label}</h2>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{tool.desc}</p>
+                  <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all">
+                    Open tool <ArrowRight className="w-3.5 h-3.5" />
                   </span>
-                )}
-                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${tool.color} flex items-center justify-center text-2xl mb-4 shadow-sm group-hover:scale-105 transition-transform duration-200`}>
-                  {tool.emoji}
                 </div>
-                <h2 className="font-bold text-foreground text-lg mb-1">{tool.label}</h2>
-                <p className="text-sm text-muted-foreground leading-relaxed">{tool.desc}</p>
-              </div>
-            </Link>
-          ))}
-        </div>
+              </Link>
+            ))}
 
-        {/* Feature strip */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+            {/* Privacy card */}
+            <div className="rounded-2xl border border-dashed border-border bg-muted/40 p-6 flex flex-col justify-center gap-3">
+              <div className="flex items-center gap-3">
+                <Lock className="w-5 h-5 text-emerald-500" />
+                <h3 className="font-semibold text-sm text-foreground">Works offline, too</h3>
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Every tool runs entirely on your machine with WebAssembly. Open the site once,
+                and it even works without internet.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* How it works */}
+        <section className="rounded-2xl border border-border bg-card p-8">
+          <h3 className="text-center font-bold text-lg mb-8">How it works</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            {[
+              { icon: MousePointerClick, title: "1. Pick a tool", desc: "Choose what you need — merge, convert, compress or split." },
+              { icon: Zap, title: "2. Drop your files", desc: "Drag and drop. Everything is processed locally in your browser." },
+              { icon: Download, title: "3. Download", desc: "Get your file instantly. Nothing was ever uploaded anywhere." },
+            ].map((step) => (
+              <div key={step.title} className="text-center space-y-3">
+                <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center mx-auto">
+                  <step.icon className="w-5 h-5" />
+                </div>
+                <h4 className="font-semibold text-sm text-foreground">{step.title}</h4>
+                <p className="text-xs text-muted-foreground leading-relaxed max-w-[16rem] mx-auto">{step.desc}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Features */}
+        <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
-            { icon: "🔒", title: "100% Private", desc: "Files never leave your device." },
-            { icon: "⚡", title: "Instant", desc: "No waiting or queues." },
-            { icon: "🆓", title: "Always Free", desc: "No sign-up or watermarks." },
-          ].map((item) => (
-            <div key={item.title} className="bg-white/70 rounded-xl border border-border/60 p-5 flex gap-4 items-start">
-              <span className="text-2xl">{item.icon}</span>
+            { icon: Lock, title: "100% Private", desc: "Files are processed on your device and never uploaded." },
+            { icon: Zap, title: "Instant", desc: "No queues, no waiting — results in a second." },
+            { icon: InfinityIcon, title: "Always Free", desc: "No sign-up, no watermarks, no page limits." },
+          ].map((f) => (
+            <div key={f.title} className="rounded-xl border border-border bg-card p-5 flex gap-4 items-start">
+              <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                <f.icon className="w-4 h-4 text-primary" />
+              </div>
               <div>
-                <h4 className="font-semibold text-sm text-foreground">{item.title}</h4>
-                <p className="text-xs text-muted-foreground">{item.desc}</p>
+                <h4 className="font-semibold text-sm text-foreground">{f.title}</h4>
+                <p className="text-xs text-muted-foreground mt-0.5">{f.desc}</p>
               </div>
             </div>
           ))}
-        </div>
+        </section>
       </div>
     </Layout>
   );

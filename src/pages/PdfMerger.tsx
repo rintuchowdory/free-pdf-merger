@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import Layout from "@/components/Layout";
+import { FileStack } from "lucide-react";
+import ToolHeader from "@/components/ToolHeader";
 
 interface PdfFile {
   id: string;
@@ -130,7 +132,7 @@ export default function PdfMerger() {
         pages.forEach((p) => merged.addPage(p));
       }
       const bytes = await merged.save();
-      const blob = new Blob([bytes], { type: "application/pdf" });
+      const blob = new Blob([bytes as unknown as BlobPart], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -150,14 +152,12 @@ export default function PdfMerger() {
   return (
     <Layout breadcrumb={{ label: "Merge PDF" }}>
       <div className="space-y-8">
-        <div className="text-center space-y-2">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-3xl mx-auto shadow-md">🔗</div>
-          <h1 className="text-3xl font-extrabold tracking-tight">Merge PDF Files</h1>
-          <p className="text-muted-foreground text-base max-w-lg mx-auto">
-            Upload your PDFs, reorder them however you like, then download a single merged file.
-            Everything runs in your browser — no uploads to any server.
-          </p>
-        </div>
+        <ToolHeader
+          icon={FileStack}
+          title="Merge PDF Files"
+          subtitle="Upload your PDFs, reorder them however you like, then download a single merged file. Everything runs in your browser — no uploads to any server."
+          gradient="from-blue-500 to-indigo-600"
+        />
 
         {/* Drop zone */}
         <div

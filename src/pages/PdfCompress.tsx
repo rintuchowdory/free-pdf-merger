@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import Layout from "@/components/Layout";
+import { Minimize2 } from "lucide-react";
+import ToolHeader from "@/components/ToolHeader";
 
 type Quality = "low" | "medium" | "high";
 
@@ -127,7 +129,7 @@ export default function PdfCompress() {
 
   const download = () => {
     if (!result || !file) return;
-    const blob = new Blob([result.bytes], { type: "application/pdf" });
+    const blob = new Blob([result.bytes as unknown as BlobPart], { type: "application/pdf" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -141,13 +143,12 @@ export default function PdfCompress() {
   return (
     <Layout breadcrumb={{ label: "Compress PDF" }}>
       <div className="space-y-8">
-        <div className="text-center space-y-2">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center text-3xl mx-auto shadow-md">🗜️</div>
-          <h1 className="text-3xl font-extrabold tracking-tight">Compress PDF</h1>
-          <p className="text-muted-foreground max-w-md mx-auto">
-            Reduce your PDF's file size while keeping it readable. Choose how much compression you want.
-          </p>
-        </div>
+        <ToolHeader
+          icon={Minimize2}
+          title="Compress PDF"
+          subtitle="Reduce your PDF's file size while keeping it readable. Choose how much compression you want."
+          gradient="from-emerald-500 to-teal-600"
+        />
 
         {/* Drop zone */}
         <div

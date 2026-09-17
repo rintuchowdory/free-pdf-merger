@@ -1,10 +1,15 @@
 import { useState, useRef, useCallback } from "react";
-import { PDFDocument } from "pdf-lib";
-import { Upload, FileText, Download, Loader2, CheckCircle2 } from "lucide-react";
+import * as pdfjsLib from "pdfjs-dist";
+import type { PDFDocumentProxy } from "pdfjs-dist";
+import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import { Upload, FileText, Download, Loader2, CheckCircle2, FileImage } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import Layout from "@/components/Layout";
+import ToolHeader from "@/components/ToolHeader";
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return "0 B";
@@ -22,57 +27,6 @@ const resOptions: { value: Resolution; label: string; desc: string }[] = [
   { value: "300", label: "Print (300 DPI)", desc: "High quality, ideal for printing." },
 ];
 
-async function renderPageToCanvas(pdfDoc: PDFDocument, pageIndex: number, dpi: number): Promise<Blob> {
-  const scale = dpi / 72;
-  const page = pdfDoc.getPage(pageIndex);
-  const { width, height } = page.getSize();
-
-  // We use the browser's built-in PDF rendering via canvas + PDF.js lite approach
-  // Since pdf-lib doesn't render visually, we use a canvas trick with the PDF data URL
-  const singleDoc = await PDFDocument.create();
-  const [copied] = await singleDoc.copyPages(pdfDoc, [pageIndex]);
-  singleDoc.addPage(copied);
-  const pdfBytes = await singleDoc.save();
-
-  const blob = new Blob([pdfBytes], { type: "application/pdf" });
-  const url = URL.createObjectURL(blob);
-
-  return new Promise((resolve, reject) => {
-    const iframe = document.createElement("iframe");
-    iframe.style.position = "fixed";
-    iframe.style.opacity = "0";
-    iframe.style.pointerEvents = "none";
-    iframe.style.width = `${Math.round(width * scale)}px`;
-    iframe.style.height = `${Math.round(height * scale)}px`;
-    iframe.style.top = "-9999px";
-    iframe.style.left = "-9999px";
-    document.body.appendChild(iframe);
-
-    iframe.onload = () => {
-      setTimeout(() => {
-        try {
-          const canvas = document.createElement("canvas");
-          canvas.width = Math.round(width * scale);
-          canvas.height = Math.round(height * scale);
-          const ctx = canvas.getContext("2d")!;
-          ctx.fillStyle = "#ffffff";
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          canvas.toBlob((b) => {
-            document.body.removeChild(iframe);
-            URL.revokeObjectURL(url);
-            resolve(b!);
-          }, "image/png");
-        } catch (e) {
-          document.body.removeChild(iframe);
-          URL.revokeObjectURL(url);
-          reject(e);
-        }
-      }, 800);
-    };
-    iframe.src = url;
-  });
-}
-
 export default function PdfToImages() {
   const [file, setFile] = useState<File | null>(null);
   const [pageCount, setPageCount] = useState(0);
@@ -81,25 +35,31 @@ export default function PdfToImages() {
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [done, setDone] = useState(false);
+  const [resultUrl, setResultUrl] = useState<string | null>(null);
+  const [resultSize, setResultSize] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  const loadFile = useCallback(async (f: File) => {
-    if (!f.name.endsWith(".pdf") && f.type !== "application/pdf") {
-      toast({ title: "Please select a PDF file", variant: "destructive" });
-      return;
-    }
-    try {
-      const buf = await f.arrayBuffer();
-      const doc = await PDFDocument.load(buf, { ignoreEncryption: true });
-      setPageCount(doc.getPageCount());
-      setFile(f);
-      setDone(false);
-      setProgress(0);
-    } catch {
-      toast({ title: "Could not read PDF", variant: "destructive" });
-    }
-  }, [toast]);
+  const loadFile = useCallback(
+    async (f: File) => {
+      if (!f.name.toLowerCase().endsWith(".pdf") && f.type !== "application/pdf") {
+        toast({ title: "Please select a PDF file", variant: "destructive" });
+        return;
+      }
+      try {
+        const buf = await f.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: buf.slice(0) }).promise;
+        setPageCount(pdf.numPages);
+        setFile(f);
+        setDone(false);
+        setProgress(0);
+        setResultUrl(null);
+      } catch {
+        toast({ title: "Could not read PDF", variant: "destructive" });
+      }
+    },
+    [toast]
+  );
 
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -113,68 +73,45 @@ export default function PdfToImages() {
     setProcessing(true);
     setDone(false);
     setProgress(0);
+    setResultUrl(null);
 
     try {
       const buf = await file.arrayBuffer();
-      const pdfDoc = await PDFDocument.load(buf, { ignoreEncryption: true });
-      const total = pdfDoc.getPageCount();
-      const baseName = file.name.replace(".pdf", "");
+      const pdf: PDFDocumentProxy = await pdfjsLib.getDocument({ data: buf.slice(0) }).promise;
+      const total = pdf.numPages;
+      const baseName = file.name.replace(/\.pdf$/i, "");
       const dpi = parseInt(resolution);
 
-      // Use html2canvas approach via PDF data URLs
-      // For each page, create a single-page PDF, show in iframe, screenshot it
       const JSZip = (await import("jszip")).default;
       const zip = new JSZip();
+      const canvas = document.createElement("canvas");
 
-      for (let i = 0; i < total; i++) {
-        setProgress(Math.round(((i) / total) * 100));
-
-        // Create single page PDF
-        const singleDoc = await PDFDocument.create();
-        const [copied] = await singleDoc.copyPages(pdfDoc, [i]);
-        singleDoc.addPage(copied);
-        const singleBytes = await singleDoc.save();
-
-        // Create canvas with white background and draw a placeholder
-        const page = pdfDoc.getPage(i);
-        const { width, height } = page.getSize();
-        const scale = dpi / 72;
-
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.round(width * scale);
-        canvas.height = Math.round(height * scale);
+      for (let i = 1; i <= total; i++) {
+        setProgress(Math.round(((i - 1) / total) * 100));
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: dpi / 72 });
+        canvas.width = Math.round(viewport.width);
+        canvas.height = Math.round(viewport.height);
         const ctx = canvas.getContext("2d")!;
-
-        // White background
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        page.cleanup();
 
-        // Draw a simple PDF page indicator
-        ctx.fillStyle = "#f1f5f9";
-        ctx.fillRect(20 * scale, 20 * scale, (width - 40) * scale, (height - 40) * scale);
-        ctx.fillStyle = "#64748b";
-        ctx.font = `${Math.round(14 * scale)}px sans-serif`;
-        ctx.textAlign = "center";
-        ctx.fillText(`Page ${i + 1} of ${total}`, canvas.width / 2, canvas.height / 2 - 10 * scale);
-        ctx.font = `${Math.round(10 * scale)}px sans-serif`;
-        ctx.fillStyle = "#94a3b8";
-        ctx.fillText(baseName, canvas.width / 2, canvas.height / 2 + 10 * scale);
-
-        const pngBlob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), "image/png"));
-        const arrayBuf = await pngBlob.arrayBuffer();
-        zip.file(`${baseName}_page${i + 1}.png`, arrayBuf);
+        const pngBlob = await new Promise<Blob>((resolve) =>
+          canvas.toBlob((b) => resolve(b!), "image/png")
+        );
+        zip.file(`${baseName}_page${String(i).padStart(2, "0")}.png`, pngBlob);
       }
 
       setProgress(95);
       const zipBlob = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
       const url = URL.createObjectURL(zipBlob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${baseName}_images.zip`;
-      a.click();
-      URL.revokeObjectURL(url);
+      setResultUrl(url);
+      setResultSize(zipBlob.size);
       setProgress(100);
       setDone(true);
+      toast({ title: "Images ready!", description: `${total} page${total > 1 ? "s" : ""} rendered as PNG` });
     } catch (err) {
       toast({ title: "Conversion failed", description: String(err), variant: "destructive" });
     } finally {
@@ -184,14 +121,13 @@ export default function PdfToImages() {
 
   return (
     <Layout breadcrumb={{ label: "PDF to Images" }}>
-      <div className="space-y-8">
-        <div className="text-center space-y-2">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center text-3xl mx-auto shadow-md">🖼️</div>
-          <h1 className="text-3xl font-extrabold tracking-tight">PDF to Images</h1>
-          <p className="text-muted-foreground max-w-md mx-auto">
-            Convert every page of your PDF into a PNG image. Downloads as a ZIP file.
-          </p>
-        </div>
+      <div className="space-y-8 max-w-5xl mx-auto">
+        <ToolHeader
+          icon={FileImage}
+          title="PDF to Images"
+          subtitle="Render every page of your PDF as a crisp PNG image — real page rendering, powered by PDF.js. Downloads as a ZIP."
+          gradient="from-purple-500 to-violet-600"
+        />
 
         {/* Drop zone */}
         <div
@@ -202,20 +138,22 @@ export default function PdfToImages() {
           onClick={() => !file && fileInputRef.current?.click()}
           className={cn(
             "relative rounded-2xl border-2 border-dashed transition-all duration-200 p-10 flex flex-col items-center justify-center gap-4 group",
-            file ? "border-border bg-white cursor-default" : "cursor-pointer",
-            dragging ? "border-primary bg-primary/5 scale-[1.01]" : !file && "hover:border-primary/50 hover:bg-primary/3 bg-white/60"
+            file ? "border-border bg-card cursor-default" : "cursor-pointer",
+            dragging
+              ? "border-primary bg-primary/5 scale-[1.01]"
+              : !file && "border-border bg-card hover:border-primary/50 hover:bg-primary/3"
           )}
         >
           {file ? (
             <div className="flex items-center gap-4 w-full max-w-sm">
-              <div className="w-12 h-12 rounded-xl bg-red-50 border border-red-100 flex items-center justify-center shrink-0">
+              <div className="w-12 h-12 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 flex items-center justify-center shrink-0">
                 <FileText className="w-6 h-6 text-red-400" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-foreground truncate">{file.name}</p>
                 <p className="text-sm text-muted-foreground">{pageCount} pages · {formatBytes(file.size)}</p>
               </div>
-              <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => { setFile(null); setPageCount(0); setDone(false); setProgress(0); }}>
+              <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => { setFile(null); setPageCount(0); setDone(false); setProgress(0); setResultUrl(null); }}>
                 Change
               </Button>
             </div>
@@ -239,57 +177,62 @@ export default function PdfToImages() {
               {resOptions.map((opt) => (
                 <button
                   key={opt.value}
-                  onClick={() => setResolution(opt.value)}
+                  onClick={() => { setResolution(opt.value); setDone(false); }}
                   className={cn(
-                    "rounded-xl border-2 p-4 text-left transition-all",
-                    resolution === opt.value ? "border-purple-300 bg-purple-50" : "border-border bg-white hover:border-primary/40"
+                    "text-left rounded-xl border p-4 transition-colors",
+                    resolution === opt.value
+                      ? "border-primary bg-primary/5"
+                      : "border-border bg-card hover:bg-muted"
                   )}
                 >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-semibold text-sm">{opt.label}</span>
-                    {resolution === opt.value && <CheckCircle2 className="w-4 h-4 text-purple-500" />}
-                  </div>
-                  <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                  <p className="text-sm font-semibold text-foreground">{opt.label}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{opt.desc}</p>
                 </button>
               ))}
             </div>
+            <Button className="w-full gap-2" size="lg" disabled={processing} onClick={convert}>
+              {processing ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" /> Rendering pages… {progress}%
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" /> Convert to PNG images
+                </>
+              )}
+            </Button>
           </div>
         )}
 
-        {processing && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Converting pages…</span>
-              <span className="font-medium">{progress}%</span>
-            </div>
-            <div className="h-2 rounded-full bg-muted overflow-hidden">
-              <div
-                className="h-full bg-primary rounded-full transition-all duration-300"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          </div>
-        )}
-
-        {done && (
-          <div className="bg-purple-50 border border-purple-200 rounded-2xl p-4 flex items-center gap-3">
-            <CheckCircle2 className="w-6 h-6 text-purple-500 shrink-0" />
-            <p className="font-medium text-foreground">Done! Your ZIP file with all page images has been downloaded.</p>
-          </div>
-        )}
-
-        {file && (
-          <Button
-            className="w-full h-12 text-base font-semibold gap-2 shadow-md"
-            onClick={convert}
-            disabled={processing}
-          >
+        {(processing || done) && (
+          <div className="rounded-xl border border-border bg-card p-5 space-y-3">
             {processing ? (
-              <><Loader2 className="w-4 h-4 animate-spin" /> Converting… {progress}%</>
+              <>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium text-foreground">Rendering pages…</span>
+                  <span className="text-muted-foreground">{progress}%</span>
+                </div>
+                <div className="h-2 rounded-full bg-muted overflow-hidden">
+                  <div className="h-full rounded-full bg-primary transition-all duration-300" style={{ width: `${progress}%` }} />
+                </div>
+              </>
             ) : (
-              <><Download className="w-4 h-4" /> Convert to Images & Download ZIP</>
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="w-6 h-6 text-emerald-500" />
+                  <div>
+                    <p className="font-semibold text-foreground">Your images are ready</p>
+                    <p className="text-xs text-muted-foreground">{pageCount} PNGs · {formatBytes(resultSize)}</p>
+                  </div>
+                </div>
+                <Button asChild className="gap-2">
+                  <a href={resultUrl ?? "#"} download={`${file?.name.replace(/\.pdf$/i, "") || "pdf"}_images.zip`}>
+                    <Download className="w-4 h-4" /> Download ZIP
+                  </a>
+                </Button>
+              </div>
             )}
-          </Button>
+          </div>
         )}
       </div>
     </Layout>

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import Layout from "@/components/Layout";
+import ToolHeader from "@/components/ToolHeader";
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return "0 B";
@@ -83,7 +84,7 @@ export default function PdfSplit() {
           const [page] = await single.copyPages(src, [i]);
           single.addPage(page);
           const bytes = await single.save();
-          const blob = new Blob([bytes], { type: "application/pdf" });
+          const blob = new Blob([bytes as unknown as BlobPart], { type: "application/pdf" });
           const url = URL.createObjectURL(blob);
           const a = document.createElement("a");
           a.href = url;
@@ -103,7 +104,7 @@ export default function PdfSplit() {
         const pages = await extracted.copyPages(src, indices);
         pages.forEach((p) => extracted.addPage(p));
         const bytes = await extracted.save();
-        const blob = new Blob([bytes], { type: "application/pdf" });
+        const blob = new Blob([bytes as unknown as BlobPart], { type: "application/pdf" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
@@ -122,13 +123,12 @@ export default function PdfSplit() {
   return (
     <Layout breadcrumb={{ label: "Split PDF" }}>
       <div className="space-y-8">
-        <div className="text-center space-y-2">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-3xl mx-auto shadow-md">✂️</div>
-          <h1 className="text-3xl font-extrabold tracking-tight">Split PDF</h1>
-          <p className="text-muted-foreground max-w-md mx-auto">
-            Split a PDF into individual pages, or extract a specific range of pages.
-          </p>
-        </div>
+        <ToolHeader
+          icon={Scissors}
+          title="Split PDF"
+          subtitle="Split a PDF into individual pages, or extract a specific range of pages."
+          gradient="from-orange-500 to-amber-600"
+        />
 
         {/* Drop zone */}
         <div
