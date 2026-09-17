@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { downloadBlob } from "@/lib/download";
 import Layout from "@/components/Layout";
 import ToolHeader from "@/components/ToolHeader";
+import DownloadHint from "@/components/DownloadHint";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 
@@ -223,6 +224,7 @@ export default function PdfToImages() {
                   <div>
                     <p className="font-semibold text-foreground">Your images are ready</p>
                     <p className="text-xs text-muted-foreground">{pageCount} PNGs · {formatBytes(resultSize)}</p>
+                    <DownloadHint />
                   </div>
                 </div>
                 <Button

@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { downloadBlob } from "@/lib/download";
 import Layout from "@/components/Layout";
 import ToolHeader from "@/components/ToolHeader";
+import DownloadHint from "@/components/DownloadHint";
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return "0 B";
@@ -439,6 +440,7 @@ export default function ImagesToPdf() {
                   <div>
                     <p className="font-semibold text-foreground">Your PDF is ready</p>
                     <p className="text-xs text-muted-foreground">{photos.length} pages · {formatBytes(resultSize)}</p>
+                    <DownloadHint />
                   </div>
                 </div>
                 <Button

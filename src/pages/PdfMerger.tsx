@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from "react";
 import { PDFDocument } from "pdf-lib";
-import { Upload, FileText, Trash2, ArrowUp, ArrowDown, Download, Loader2, GripVertical, Plus } from "lucide-react";
+import { Upload, FileText, Trash2, ArrowUp, ArrowDown, Download, Loader2, GripVertical, Plus, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -8,6 +8,7 @@ import { downloadBlob } from "@/lib/download";
 import Layout from "@/components/Layout";
 import { FileStack } from "lucide-react";
 import ToolHeader from "@/components/ToolHeader";
+import DownloadHint from "@/components/DownloadHint";
 
 interface PdfFile {
   id: string;
@@ -39,6 +40,7 @@ export default function PdfMerger() {
   const [files, setFiles] = useState<PdfFile[]>([]);
   const [dragging, setDragging] = useState(false);
   const [merging, setMerging] = useState(false);
+  const [resultBlob, setResultBlob] = useState<Blob | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -61,6 +63,7 @@ export default function PdfMerger() {
         };
       })
     );
+    setResultBlob(null);
     setFiles((prev) => [...prev, ...entries]);
   }, [toast]);
 
@@ -134,8 +137,9 @@ export default function PdfMerger() {
       }
       const bytes = await merged.save();
       const blob = new Blob([bytes as unknown as BlobPart], { type: "application/pdf" });
+      setResultBlob(blob);
       await downloadBlob(blob, "merged.pdf");
-      toast({ title: "PDF merged and downloaded!" });
+      toast({ title: "PDF merged!", description: "If the download didn't start, tap the Download button below." });
     } catch (err) {
       toast({ title: "Failed to merge PDFs", description: String(err), variant: "destructive" });
     } finally {
@@ -267,6 +271,21 @@ export default function PdfMerger() {
                 )}
               </Button>
             </div>
+          </div>
+        )}
+
+        {resultBlob && (
+          <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-start sm:items-center gap-3">
+              <CheckCircle2 className="w-6 h-6 text-emerald-500 shrink-0" />
+              <div>
+                <p className="font-semibold text-foreground">Your merged PDF is ready</p>
+                <DownloadHint />
+              </div>
+            </div>
+            <Button className="gap-2 shrink-0" onClick={() => downloadBlob(resultBlob, "merged.pdf")}>
+              <Download className="w-4 h-4" /> Download PDF
+            </Button>
           </div>
         )}
 

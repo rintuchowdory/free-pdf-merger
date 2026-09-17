@@ -8,6 +8,7 @@ import { downloadBlob } from "@/lib/download";
 import Layout from "@/components/Layout";
 import { Minimize2 } from "lucide-react";
 import ToolHeader from "@/components/ToolHeader";
+import DownloadHint from "@/components/DownloadHint";
 
 type Quality = "low" | "medium" | "high";
 
@@ -231,6 +232,7 @@ export default function PdfCompress() {
                     <span className="ml-2 text-xs text-muted-foreground">(PDF was already optimized)</span>
                   )}
                 </p>
+                <DownloadHint />
               </div>
             </div>
             <Button onClick={download} className="gap-2 shrink-0">

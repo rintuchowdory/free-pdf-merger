@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { downloadBlob } from "@/lib/download";
 import Layout from "@/components/Layout";
 import ToolHeader from "@/components/ToolHeader";
+import DownloadHint from "@/components/DownloadHint";
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return "0 B";
@@ -43,6 +44,7 @@ export default function PdfSplit() {
   const [dragging, setDragging] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [done, setDone] = useState(false);
+  const [resultBlob, setResultBlob] = useState<Blob | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -91,6 +93,7 @@ export default function PdfSplit() {
           zip.file(`${baseName}_page${i + 1}.pdf`, bytes as unknown as ArrayBuffer);
         }
         const zipBlob = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
+        setResultBlob(zipBlob);
         await downloadBlob(zipBlob, `${baseName}_pages.zip`);
       } else {
         const indices = parsePageRange(rangeInput, pageCount);
@@ -104,6 +107,7 @@ export default function PdfSplit() {
         pages.forEach((p) => extracted.addPage(p));
         const bytes = await extracted.save();
         const blob = new Blob([bytes as unknown as BlobPart], { type: "application/pdf" });
+        setResultBlob(blob);
         await downloadBlob(blob, `${baseName}_pages${rangeInput.replace(/\s/g, "")}.pdf`);
       }
       setDone(true);
@@ -212,9 +216,20 @@ export default function PdfSplit() {
         )}
 
         {done && (
-          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center gap-3">
-            <CheckCircle2 className="w-6 h-6 text-emerald-500 shrink-0" />
-            <p className="font-medium text-foreground">Done! Your files have been downloaded.</p>
+          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <CheckCircle2 className="w-6 h-6 text-emerald-500 shrink-0" />
+              <div>
+                <p className="font-medium text-foreground">Split complete! Your file has been downloaded.</p>
+                <DownloadHint />
+              </div>
+            </div>
+            {resultBlob && (
+              <Button variant="outline" className="gap-2 shrink-0"
+                onClick={() => downloadBlob(resultBlob, resultBlob.type === "application/zip" ? `${file?.name.replace(".pdf", "")}_pages.zip` : `${file?.name.replace(".pdf", "")}_pages.zip`)}>
+                <Download className="w-4 h-4" /> Download again
+              </Button>
+            )}
           </div>
         )}
 
